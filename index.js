@@ -6,38 +6,87 @@ const app = express();
 app.use(express.json());
 
 app.post('/webhook', async (req, res) => {
-    const inventoryItemId = req.body.inventory_item_id;
-    const inventoryLevel = req.body.available;
 
-    console.log(inventoryLevel);
+    // Hardcoded for testing purposes since the webhook payload gives mock data
+    const inventoryItemId = 52468339573058;
+    const inventoryLevel = req.body.available;
 
     if (inventoryLevel == null) {
         try {
-            const response = await axios.get(`${process.env.SHOPIFY_API_URL}/variants.json?inventory_item_id=${inventoryItemId}`, {
-                headers: { 'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN }
-            });
-
-            if (response.data.variants.length === 0) {
-                console.log("No variant found for inventory_item_id:", inventoryItemId);
-                return res.sendStatus(404);
-            }
-
-            const variantId = response.data.variants[0].id;
-            console.log("Variant ID:", variantId);
-
-            const etaDate = "2025-12-31";
-
-            await axios.post(`${process.env.SHOPIFY_API_URL}/variants/${variantId}/metafields/${process.env.METAFIELD_ID}.json`, {
-                metafield: {
-                    id: process.env.METAFIELD_ID,
-                    value: etaDate,
-                    type: "date"
+            // Fetch the variant ID and product ID using the InventoryItem ID
+            const query = `
+                query {
+                    node(id: "gid://shopify/InventoryItem/${inventoryItemId}") {
+                        ... on InventoryItem {
+                            id
+                            variant {
+                                id
+                                product {
+                                    id
+                                }
+                            }
+                        }
+                    }
                 }
-            }, {
-                headers: { 'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN }
-            });
-            
-            console.log(`Metafield updated with ETA: ${etaDate}`);
+            `;
+
+            const response = await axios.post(`${process.env.SHOPIFY_API_URL}/graphql.json`,
+                { query },
+                {
+                  headers: {
+                    "Content-Type": "application/json",
+                    "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN,
+                  },
+                }
+            );
+
+            // Extract the variant ID and product ID from the response
+            const variantId = response.data.data.node.variant.id.split("/").pop();
+            const productId = response.data.data.node.variant.product.id.split("/").pop();
+
+            console.log("Product ID: ", productId);
+            console.log("Variant ID: ", variantId);
+
+            // Hardcoded for testing purposes, ETA date from Obeetee external API
+            const etaDate = "2025-07-07";
+
+            // Update the metafield for the variant with the ETA date
+            const metafieldQuery = `
+                mutation SetVariantMetafield {
+                    metafieldsSet(metafields: [
+                    {
+                        ownerId: "gid://shopify/ProductVariant/${variantId}",
+                        namespace: "custom",
+                        key: "expected_stock_date",
+                        value: "${etaDate}", 
+                        type: "date"
+                    }]) 
+                    {
+                        metafields {
+                            id
+                            namespace
+                            key
+                            value
+                        }
+                        userErrors {
+                            field
+                            message
+                        }
+                    }
+                }
+            `;
+
+            await axios.post(`${process.env.SHOPIFY_API_URL}/graphql.json`,
+                { query: metafieldQuery },
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN,
+                    },
+                }
+            );
+
+            console.log("Metafield Update Response:", response.data);
 
             } catch (error) {
                 console.error("Error processing webhook:", error.response ? error.response.data : error.message);
@@ -46,6 +95,8 @@ app.post('/webhook', async (req, res) => {
 
     res.sendStatus(200);
 })
+
+
 
 app.listen(3000, () => {
     console.log('Webhook server is listening on port 3000');
