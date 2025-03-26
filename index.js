@@ -9,7 +9,8 @@ app.post('/webhook', async (req, res) => {
 
     // Hardcoded for testing purposes since the webhook payload gives mock data
     const inventoryItemId = 52468339573058;
-    const inventoryLevel = req.body.available;
+    // const inventoryLevel = req.body.available;
+    const inventoryLevel = 1;
 
     if (inventoryLevel == null) {
         try {
@@ -90,6 +91,59 @@ app.post('/webhook', async (req, res) => {
 
             } catch (error) {
                 console.error("Error processing webhook:", error.response ? error.response.data : error.message);
+        }
+    } else if (inventoryLevel >= 1) {
+        try {
+            const getVariantMetafieldId = `
+                query GetVariantMetafieldId {
+                    productVariant(id: "gid://shopify/ProductVariant/50412453069122") {
+                        metafield(namespace: "custom", key: "expected_stock_date") {
+                            id
+                        }
+                    }
+                }
+            `;
+
+            const response = await axios.post(`${process.env.SHOPIFY_API_URL}/graphql.json`,
+                { query: getVariantMetafieldId },
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN,
+                    },
+                }
+            );
+            
+            const variantMetafieldId = response.data.data.productVariant.metafield.id.split("/").pop();
+            console.log(`Variant Metafield ID:`, variantMetafieldId);
+
+            const deleteVariantMetafield = `
+                mutation DeleteVariantMetafield {
+                    metafieldDelete(input: {
+                        id: "gid://shopify/Metafield/${variantMetafieldId}" # Replace with the retrieved metafield ID
+                    }) {
+                            deletedId
+                            userErrors {
+                                field
+                                message
+                            }
+                        }
+                }
+            `;
+
+            await axios.post(`${process.env.SHOPIFY_API_URL}/graphql.json`,
+                { query: deleteVariantMetafield },
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN,
+                    },
+                }
+            );
+
+            console.log("Metafield Deletion Response:", response.data);
+        } catch (error) {
+            console.error("Error processing webhook:", error.response ? error.response.data : error.message);
         }
     }
 
