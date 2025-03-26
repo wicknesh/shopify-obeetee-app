@@ -92,11 +92,13 @@ app.post('/webhook', async (req, res) => {
             } catch (error) {
                 console.error("Error processing webhook:", error.response ? error.response.data : error.message);
         }
+       // if inventorylevel is greater than or equal to 1, delete the metafield
     } else if (inventoryLevel >= 1) {
         try {
+            // Fetch the metafield ID for the variant
             const getVariantMetafieldId = `
                 query GetVariantMetafieldId {
-                    productVariant(id: "gid://shopify/ProductVariant/50412453069122") {
+                    productVariant(id: "gid://shopify/ProductVariant/50412453069122") { // Replace with the variant ID
                         metafield(namespace: "custom", key: "expected_stock_date") {
                             id
                         }
@@ -114,9 +116,11 @@ app.post('/webhook', async (req, res) => {
                 }
             );
             
+            // Extract the metafield ID from the response
             const variantMetafieldId = response.data.data.productVariant.metafield.id.split("/").pop();
             console.log(`Variant Metafield ID:`, variantMetafieldId);
 
+            // Delete the metafield for the variant
             const deleteVariantMetafield = `
                 mutation DeleteVariantMetafield {
                     metafieldDelete(input: {
