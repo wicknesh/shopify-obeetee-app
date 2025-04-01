@@ -12,7 +12,7 @@ app.post('/webhook', async (req, res) => {
     const inventoryLevel = 0;
 
     // const config = {
-    //     url: `https://nuorders-d7571faf.serverless.boltic.app/v1.0/organization/c68b9ee3-3a8a-4165-951c-c9c3d8f3277e/f1150abd-02e0-4522-8bf2-f6787241d699-http/v1/orders?COS_SIDE_MARK=${selectedVariant.sku}`,
+    //     url: `${process.env.OBEETEE_EXT_API}=${selectedVariant.sku}`,
     //     method: 'GET'
     // };
 
