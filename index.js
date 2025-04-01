@@ -8,9 +8,13 @@ app.use(express.json());
 app.post('/webhook', async (req, res) => {
 
     // Hardcoded for testing purposes since the webhook payload gives mock data
-    const inventoryItemId = 52468339573058;
-    // const inventoryLevel = req.body.available;
-    const inventoryLevel = 1;
+    const inventoryItemId = 47110185255106;
+    const inventoryLevel = 0;
+
+    // const config = {
+    //     url: `https://nuorders-d7571faf.serverless.boltic.app/v1.0/organization/c68b9ee3-3a8a-4165-951c-c9c3d8f3277e/f1150abd-02e0-4522-8bf2-f6787241d699-http/v1/orders?COS_SIDE_MARK=${selectedVariant.sku}`,
+    //     method: 'GET'
+    // };
 
     if (inventoryLevel == null) {
         try {
