@@ -16,8 +16,7 @@ app.post('/webhook', async (req, res) => {
     let sku;
     let productId;
     let variantId;
-    // console.log(inventoryItemId);
-    // console.log(inventoryLevel);
+
 
     try {
         // Fetch the variant ID and product ID using the InventoryItem ID
@@ -64,7 +63,7 @@ app.post('/webhook', async (req, res) => {
     if (inventoryLevel <= 0) {
         try {
             // Hardcoded for testing purposes, ETA date from Obeetee external API
-            const etaDate = "2025-10-10";
+            const etaDate = "2025-12-12";
             console.log(variantId);
 
             // Fetch ETA date from Obeetee external API
@@ -118,7 +117,7 @@ app.post('/webhook', async (req, res) => {
             // Fetch the metafield ID for the variant
             const getVariantMetafieldId = `
                 query GetVariantMetafieldId {
-                    productVariant(id: "gid://shopify/ProductVariant/50412453069122") { // Replace with the variant ID
+                    productVariant(id: "gid://shopify/ProductVariant/${variantId}") {
                         metafield(namespace: "custom", key: "expected_stock_date") {
                             id
                         }
@@ -137,36 +136,35 @@ app.post('/webhook', async (req, res) => {
             );
             
             // Extract the metafield ID from the response
-            console.log(response.data.data);
-            // const variantMetafieldId = response.data.data.productVariant.metafield.id.split("/").pop();
-            // console.log(`Variant Metafield ID:`, variantMetafieldId);
+            const variantMetafieldId = response.data.data.productVariant.metafield.id.split("/").pop();
+            console.log(`Variant Metafield ID:`, variantMetafieldId);
 
-            // // Delete the metafield for the variant
-            // const deleteVariantMetafield = `
-            //     mutation DeleteVariantMetafield {
-            //         metafieldDelete(input: {
-            //             id: "gid://shopify/Metafield/${variantMetafieldId}" # Replace with the retrieved metafield ID
-            //         }) {
-            //                 deletedId
-            //                 userErrors {
-            //                     field
-            //                     message
-            //                 }
-            //             }
-            //     }
-            // `;
+            // Delete the metafield for the variant
+            const deleteVariantMetafield = `
+                mutation DeleteVariantMetafield {
+                    metafieldDelete(input: {
+                        id: "gid://shopify/Metafield/${variantMetafieldId}" # Replace with the retrieved metafield ID
+                    }) {
+                            deletedId
+                            userErrors {
+                                field
+                                message
+                            }
+                        }
+                }
+            `;
 
-            // await axios.post(`${process.env.SHOPIFY_API_URL}/graphql.json`,
-            //     { query: deleteVariantMetafield },
-            //     {
-            //         headers: {
-            //             "Content-Type": "application/json",
-            //             "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN,
-            //         },
-            //     }
-            // );
+            await axios.post(`${process.env.SHOPIFY_API_URL}/graphql.json`,
+                { query: deleteVariantMetafield },
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN,
+                    },
+                }
+            );
 
-            // console.log("Metafield Deletion Response:", response.data);
+            console.log("Metafield Deletion Response:", response.data);
         } catch (error) {
             console.error("Error processing webhook:", error.response ? error.response.data : error.message);
         }
