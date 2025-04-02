@@ -13,6 +13,9 @@ app.post('/webhook', async (req, res) => {
 
     const inventoryLevel = req.body.available;
     const inventoryItemId = req.body.inventory_item_id;
+    let sku;
+    let productId;
+    let variantId;
     // console.log(inventoryItemId);
     // console.log(inventoryLevel);
 
@@ -47,9 +50,9 @@ app.post('/webhook', async (req, res) => {
 
         // console.log("GraphQL Response:", response.data.data);
         // Extract the variant ID and product ID from the response
-        const sku = response.data.data.node.sku;
-        const variantId = response.data.data.node.variant.id.split("/").pop();
-        const productId = response.data.data.node.variant.product.id.split("/").pop();
+        sku = response.data.data.node.sku;
+        variantId = response.data.data.node.variant.id.split("/").pop();
+        productId = response.data.data.node.variant.product.id.split("/").pop();
 
         console.log("SKU: ", sku);
         console.log("Product ID: ", productId);
@@ -62,6 +65,7 @@ app.post('/webhook', async (req, res) => {
         try {
             // Hardcoded for testing purposes, ETA date from Obeetee external API
             const etaDate = "2025-10-10";
+            console.log(variantId);
 
             // Fetch ETA date from Obeetee external API
             // const etaResponse = await axios.get(`${process.env.OBEETEE_EXT_API}=${sku}`);
@@ -103,7 +107,7 @@ app.post('/webhook', async (req, res) => {
                 }
             );
 
-            console.log("Metafield Update Response:", response.data);
+            // console.log("Metafield Update Response:", response.data);
 
             } catch (error) {
                 console.error("Error processing webhook:", error.response ? error.response.data : error.message);
